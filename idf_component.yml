@@ -1,12 +1,12 @@
 dependencies:
   idf: "^5.3"
-description: ESP32 ML307R/ML307A Cat.1 Cellular Module
+description: ESP32 EC800 Cat.1 Cellular Module
 files:
   exclude:
   - .git
   - dist
 license: MIT
-maintainer: Terrence <terrence@tenclass.com>
-repository: git://github.com/78/esp-ml307.git
-url: https://github.com/78/esp-ml307.git
-version: 1.7.2
+maintainer: Keys <1315541708@qq.com>
+repository: https://github.com/KeysPAN0114/esp-ec800x.git
+url: https://github.com/KeysPAN0114/esp-ec800x.git
+version: 1.0.0

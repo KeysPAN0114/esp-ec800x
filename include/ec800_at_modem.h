@@ -1,5 +1,5 @@
-#ifndef _ML307_AT_MODEM_H_
-#define _ML307_AT_MODEM_H_
+#ifndef _EC800_AT_MODEM_H_
+#define _EC800_AT_MODEM_H_
 
 #include <cstddef>
 #include <string>
@@ -37,10 +37,10 @@ struct AtArgumentValue {
 
 typedef std::function<void(const std::string& command, const std::vector<AtArgumentValue>& arguments)> CommandResponseCallback;
 
-class Ml307AtModem {
+class EC800AtModem {
 public:
-    Ml307AtModem(int tx_pin = GPIO_NUM_17, int rx_pin = GPIO_NUM_18, size_t rx_buffer_size = 2048);
-    ~Ml307AtModem();
+    EC800AtModem(int tx_pin = GPIO_NUM_17, int rx_pin = GPIO_NUM_18, size_t rx_buffer_size = 2048);
+    ~EC800AtModem();
 
     std::string EncodeHex(const std::string& data);
     std::string DecodeHex(const std::string& data);
@@ -104,4 +104,4 @@ private:
 };
 
 
-#endif // _ML307_AT_MODEM_H_
+#endif // _EC800_AT_MODEM_H_

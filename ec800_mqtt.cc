@@ -1,9 +1,9 @@
-#include "ml307_mqtt.h"
+#include "ec800_mqtt.h"
 #include <esp_log.h>
 
-static const char *TAG = "Ml307Mqtt";
+static const char *TAG = "EC800Mqtt";
 
-Ml307Mqtt::Ml307Mqtt(Ml307AtModem& modem, int mqtt_id) : modem_(modem), mqtt_id_(mqtt_id) {
+EC800Mqtt::EC800Mqtt(EC800AtModem& modem, int mqtt_id) : modem_(modem), mqtt_id_(mqtt_id) {
     event_group_handle_ = xEventGroupCreate();
 
     command_callback_it_ = modem_.RegisterCommandResponseCallback([this](const std::string command, const std::vector<AtArgumentValue>& arguments) {
@@ -48,12 +48,12 @@ Ml307Mqtt::Ml307Mqtt(Ml307AtModem& modem, int mqtt_id) : modem_(modem), mqtt_id_
     });
 }
 
-Ml307Mqtt::~Ml307Mqtt() {
+EC800Mqtt::~EC800Mqtt() {
     modem_.UnregisterCommandResponseCallback(command_callback_it_);
     vEventGroupDelete(event_group_handle_);
 }
 
-bool Ml307Mqtt::Connect(const std::string broker_address, int broker_port, const std::string client_id, const std::string username, const std::string password) {
+bool EC800Mqtt::Connect(const std::string broker_address, int broker_port, const std::string client_id, const std::string username, const std::string password) {
     broker_address_ = broker_address;
     broker_port_ = broker_port;
     client_id_ = client_id;
@@ -117,7 +117,7 @@ bool Ml307Mqtt::Connect(const std::string broker_address, int broker_port, const
     return true;
 }
 
-bool Ml307Mqtt::IsConnected() {
+bool EC800Mqtt::IsConnected() {
     // 检查这个 id 是否已经连接
     modem_.Command(std::string("AT+MQTTSTATE=") + std::to_string(mqtt_id_));
     auto bits = xEventGroupWaitBits(event_group_handle_, MQTT_INITIALIZED_EVENT, pdTRUE, pdFALSE, pdMS_TO_TICKS(MQTT_CONNECT_TIMEOUT_MS));
@@ -128,14 +128,14 @@ bool Ml307Mqtt::IsConnected() {
     return connected_;
 }
 
-void Ml307Mqtt::Disconnect() {
+void EC800Mqtt::Disconnect() {
     if (!connected_) {
         return;
     }
     modem_.Command(std::string("AT+MQTTDISC=") + std::to_string(mqtt_id_));
 }
 
-bool Ml307Mqtt::Publish(const std::string topic, const std::string payload, int qos) {
+bool EC800Mqtt::Publish(const std::string topic, const std::string payload, int qos) {
     if (!connected_) {
         return false;
     }
@@ -145,7 +145,7 @@ bool Ml307Mqtt::Publish(const std::string topic, const std::string payload, int 
     return modem_.Command(command);
 }
 
-bool Ml307Mqtt::Subscribe(const std::string topic, int qos) {
+bool EC800Mqtt::Subscribe(const std::string topic, int qos) {
     if (!connected_) {
         return false;
     }
@@ -153,7 +153,7 @@ bool Ml307Mqtt::Subscribe(const std::string topic, int qos) {
     return modem_.Command(command);
 }
 
-bool Ml307Mqtt::Unsubscribe(const std::string topic) {
+bool EC800Mqtt::Unsubscribe(const std::string topic) {
     if (!connected_) {
         return false;
     }
@@ -161,7 +161,7 @@ bool Ml307Mqtt::Unsubscribe(const std::string topic) {
     return modem_.Command(command);
 }
 
-std::string Ml307Mqtt::ErrorToString(int error_code) {
+std::string EC800Mqtt::ErrorToString(int error_code) {
     switch (error_code) {
         case 0:
             return "连接成功";

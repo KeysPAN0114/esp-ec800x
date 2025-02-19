@@ -1,7 +1,7 @@
-#ifndef ML307_HTTP_TRANSPORT_H
-#define ML307_HTTP_TRANSPORT_H
+#ifndef EC800_HTTP_TRANSPORT_H
+#define EC800_HTTP_TRANSPORT_H
 
-#include "ml307_at_modem.h"
+#include "ec800_at_modem.h"
 #include "http.h"
 #include <freertos/FreeRTOS.h>
 #include <freertos/event_groups.h>
@@ -14,14 +14,14 @@
 
 #define HTTP_CONNECT_TIMEOUT_MS 30000
 
-#define ML307_HTTP_EVENT_INITIALIZED (1 << 0)
-#define ML307_HTTP_EVENT_ERROR (1 << 2)
-#define ML307_HTTP_EVENT_HEADERS_RECEIVED (1 << 3)
+#define EC800_HTTP_EVENT_INITIALIZED (1 << 0)
+#define EC800_HTTP_EVENT_ERROR (1 << 2)
+#define EC800_HTTP_EVENT_HEADERS_RECEIVED (1 << 3)
 
-class Ml307Http : public Http {
+class EC800Http : public Http {
 public:
-    Ml307Http(Ml307AtModem& modem);
-    ~Ml307Http();
+    EC800Http(EC800AtModem& modem);
+    ~EC800Http();
 
     void SetHeader(const std::string& key, const std::string& value) override;
     bool Open(const std::string& method, const std::string& url, const std::string& content = "") override;
@@ -34,7 +34,7 @@ public:
     int Read(char* buffer, size_t buffer_size) override;
 
 private:
-    Ml307AtModem& modem_;
+    EC800AtModem& modem_;
     EventGroupHandle_t event_group_handle_;
     std::mutex mutex_;
     std::condition_variable cv_;

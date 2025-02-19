@@ -1,12 +1,12 @@
-#include "ml307_http.h"
+#include "ec800_http.h"
 #include <esp_log.h>
 #include <cstring>
 #include <sstream>
 #include <chrono>
 
-static const char *TAG = "Ml307Http";
+static const char *TAG = "EC800Http";
 
-Ml307Http::Ml307Http(Ml307AtModem& modem) : modem_(modem) {
+EC800Http::EC800Http(EC800AtModem& modem) : modem_(modem) {
     event_group_handle_ = xEventGroupCreate();
 
     command_callback_it_ = modem_.RegisterCommandResponseCallback([this](const std::string& command, const std::vector<AtArgumentValue>& arguments) {
@@ -17,7 +17,7 @@ Ml307Http::Ml307Http(Ml307AtModem& modem) : modem_(modem) {
                     body_.clear();
                     status_code_ = arguments[2].int_value;
                     ParseResponseHeaders(modem_.DecodeHex(arguments[4].string_value));
-                    xEventGroupSetBits(event_group_handle_, ML307_HTTP_EVENT_HEADERS_RECEIVED);
+                    xEventGroupSetBits(event_group_handle_, EC800_HTTP_EVENT_HEADERS_RECEIVED);
                 } else if (type == "content") {
                     // +MHTTPURC: "content",<httpid>,<content_len>,<sum_len>,<cur_len>,<data>
                     std::string decoded_data;
@@ -37,45 +37,45 @@ Ml307Http::Ml307Http(Ml307AtModem& modem) : modem_(modem) {
                     cv_.notify_one();  // 使用条件变量通知
                 } else if (type == "err") {
                     error_code_ = arguments[2].int_value;
-                    xEventGroupSetBits(event_group_handle_, ML307_HTTP_EVENT_ERROR);
+                    xEventGroupSetBits(event_group_handle_, EC800_HTTP_EVENT_ERROR);
                 }
             }
         } else if (command == "MHTTPCREATE") {
             http_id_ = arguments[0].int_value;
-            xEventGroupSetBits(event_group_handle_, ML307_HTTP_EVENT_INITIALIZED);
+            xEventGroupSetBits(event_group_handle_, EC800_HTTP_EVENT_INITIALIZED);
         } else if (command == "FIFO_OVERFLOW") {
-            xEventGroupSetBits(event_group_handle_, ML307_HTTP_EVENT_ERROR);
+            xEventGroupSetBits(event_group_handle_, EC800_HTTP_EVENT_ERROR);
             Close();
         }
     });
 }
 
-int Ml307Http::Read(char* buffer, size_t buffer_size) {
+int EC800Http::Read(char* buffer, size_t buffer_size) {
     std::unique_lock<std::mutex> lock(mutex_);
-    
+
     if (eof_ && body_.empty()) {
         return 0;
     }
-    
+
     // 使用条件变量等待数据
     auto timeout = std::chrono::milliseconds(HTTP_CONNECT_TIMEOUT_MS);
-    bool received = cv_.wait_for(lock, timeout, [this] { 
-        return !body_.empty() || eof_; 
+    bool received = cv_.wait_for(lock, timeout, [this] {
+        return !body_.empty() || eof_;
     });
-    
+
     if (!received) {
         ESP_LOGE(TAG, "等待HTTP内容接收超时");
         return -1;
     }
-    
+
     size_t bytes_to_read = std::min(body_.size(), buffer_size);
     std::memcpy(buffer, body_.data(), bytes_to_read);
     body_.erase(0, bytes_to_read);
-    
+
     return bytes_to_read;
 }
 
-Ml307Http::~Ml307Http() {
+EC800Http::~EC800Http() {
     if (connected_) {
         Close();
     }
@@ -83,11 +83,11 @@ Ml307Http::~Ml307Http() {
     vEventGroupDelete(event_group_handle_);
 }
 
-void Ml307Http::SetHeader(const std::string& key, const std::string& value) {
+void EC800Http::SetHeader(const std::string& key, const std::string& value) {
     headers_[key] = value;
 }
 
-void Ml307Http::ParseResponseHeaders(const std::string& headers) {
+void EC800Http::ParseResponseHeaders(const std::string& headers) {
     std::istringstream iss(headers);
     std::string line;
     while (std::getline(iss, line)) {
@@ -99,7 +99,7 @@ void Ml307Http::ParseResponseHeaders(const std::string& headers) {
     }
 }
 
-bool Ml307Http::Open(const std::string& method, const std::string& url, const std::string& content) {
+bool EC800Http::Open(const std::string& method, const std::string& url, const std::string& content) {
     method_ = method;
     url_ = url;
     // 解析URL
@@ -129,8 +129,8 @@ bool Ml307Http::Open(const std::string& method, const std::string& url, const st
         return false;
     }
 
-    auto bits = xEventGroupWaitBits(event_group_handle_, ML307_HTTP_EVENT_INITIALIZED, pdTRUE, pdFALSE, pdMS_TO_TICKS(HTTP_CONNECT_TIMEOUT_MS));
-    if (!(bits & ML307_HTTP_EVENT_INITIALIZED)) {
+    auto bits = xEventGroupWaitBits(event_group_handle_, EC800_HTTP_EVENT_INITIALIZED, pdTRUE, pdFALSE, pdMS_TO_TICKS(HTTP_CONNECT_TIMEOUT_MS));
+    if (!(bits & EC800_HTTP_EVENT_INITIALIZED)) {
         ESP_LOGE(TAG, "等待HTTP连接创建超时");
         return false;
     }
@@ -181,12 +181,12 @@ bool Ml307Http::Open(const std::string& method, const std::string& url, const st
     modem_.Command(std::string(command) + modem_.EncodeHex(path_));
 
     // Wait for headers
-    bits = xEventGroupWaitBits(event_group_handle_, ML307_HTTP_EVENT_HEADERS_RECEIVED | ML307_HTTP_EVENT_ERROR, pdTRUE, pdFALSE, pdMS_TO_TICKS(HTTP_CONNECT_TIMEOUT_MS));
-    if (bits & ML307_HTTP_EVENT_ERROR) {
+    bits = xEventGroupWaitBits(event_group_handle_, EC800_HTTP_EVENT_HEADERS_RECEIVED | EC800_HTTP_EVENT_ERROR, pdTRUE, pdFALSE, pdMS_TO_TICKS(HTTP_CONNECT_TIMEOUT_MS));
+    if (bits & EC800_HTTP_EVENT_ERROR) {
         ESP_LOGE(TAG, "HTTP请求错误: %s", ErrorCodeToString(error_code_).c_str());
         return false;
     }
-    if (!(bits & ML307_HTTP_EVENT_HEADERS_RECEIVED)) {
+    if (!(bits & EC800_HTTP_EVENT_HEADERS_RECEIVED)) {
         ESP_LOGE(TAG, "等待HTTP头部接收超时");
         return false;
     }
@@ -206,27 +206,27 @@ bool Ml307Http::Open(const std::string& method, const std::string& url, const st
     return true;
 }
 
-size_t Ml307Http::GetBodyLength() const {
+size_t EC800Http::GetBodyLength() const {
     return content_length_;
 }
 
-const std::string& Ml307Http::GetBody() {
+const std::string& EC800Http::GetBody() {
     std::unique_lock<std::mutex> lock(mutex_);
-    
+
     auto timeout = std::chrono::milliseconds(HTTP_CONNECT_TIMEOUT_MS);
-    bool received = cv_.wait_for(lock, timeout, [this] { 
-        return eof_; 
+    bool received = cv_.wait_for(lock, timeout, [this] {
+        return eof_;
     });
-    
+
     if (!received) {
         ESP_LOGE(TAG, "等待HTTP内容接收完成超时");
         return body_;
     }
-    
+
     return body_;
 }
 
-void Ml307Http::Close() {
+void EC800Http::Close() {
     if (!connected_) {
         return;
     }
@@ -240,7 +240,7 @@ void Ml307Http::Close() {
     ESP_LOGI(TAG, "HTTP连接已关闭，ID: %d", http_id_);
 }
 
-std::string Ml307Http::ErrorCodeToString(int error_code) {
+std::string EC800Http::ErrorCodeToString(int error_code) {
     switch (error_code) {
         case 1: return "域名解析失败";
         case 2: return "连接服务器失败";
@@ -257,7 +257,7 @@ std::string Ml307Http::ErrorCodeToString(int error_code) {
     }
 }
 
-std::string Ml307Http::GetResponseHeader(const std::string& key) const {
+std::string EC800Http::GetResponseHeader(const std::string& key) const {
     auto it = response_headers_.find(key);
     if (it != response_headers_.end()) {
         return it->second;

@@ -1,18 +1,18 @@
-#include "ml307_at_modem.h"
+#include "ec800_at_modem.h"
 #include <esp_log.h>
 #include <esp_err.h>
 #include <sstream>
 #include <iomanip>
 #include <cstring>
 
-static const char* TAG = "Ml307AtModem";
+static const char* TAG = "EC800AtModem";
 
 
 static bool is_number(const std::string& s) {
     return !s.empty() && std::all_of(s.begin(), s.end(), ::isdigit) && s.length() < 10;
 }
 
-Ml307AtModem::Ml307AtModem(int tx_pin, int rx_pin, size_t rx_buffer_size)
+EC800AtModem::EC800AtModem(int tx_pin, int rx_pin, size_t rx_buffer_size)
     : rx_buffer_size_(rx_buffer_size), uart_num_(DEFAULT_UART_NUM), tx_pin_(tx_pin), rx_pin_(rx_pin), baud_rate_(DEFAULT_BAUD_RATE) {
     event_group_handle_ = xEventGroupCreate();
 
@@ -22,32 +22,32 @@ Ml307AtModem::Ml307AtModem(int tx_pin, int rx_pin, size_t rx_buffer_size)
     uart_config.parity = UART_PARITY_DISABLE;
     uart_config.stop_bits = UART_STOP_BITS_1;
     uart_config.source_clk = UART_SCLK_DEFAULT;
-    
+
     ESP_ERROR_CHECK(uart_driver_install(uart_num_, rx_buffer_size_ * 2, 0, 100, &event_queue_handle_, 0));
     ESP_ERROR_CHECK(uart_param_config(uart_num_, &uart_config));
     ESP_ERROR_CHECK(uart_set_pin(uart_num_, tx_pin_, rx_pin_, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
 
     xTaskCreate([](void* arg) {
-        auto ml307_at_modem = (Ml307AtModem*)arg;
+        auto ml307_at_modem = (EC800AtModem*)arg;
         ml307_at_modem->EventTask();
         vTaskDelete(NULL);
     }, "modem_event", 4096, this, 5, &event_task_handle_);
 
     xTaskCreate([](void* arg) {
-        auto ml307_at_modem = (Ml307AtModem*)arg;
+        auto ml307_at_modem = (EC800AtModem*)arg;
         ml307_at_modem->ReceiveTask();
         vTaskDelete(NULL);
     }, "modem_receive", 4096 * 2, this, 5, &receive_task_handle_);
 }
 
-Ml307AtModem::~Ml307AtModem() {
+EC800AtModem::~EC800AtModem() {
     vTaskDelete(event_task_handle_);
     vTaskDelete(receive_task_handle_);
     vEventGroupDelete(event_group_handle_);
     uart_driver_delete(uart_num_);
 }
 
-bool Ml307AtModem::DetectBaudRate() {
+bool EC800AtModem::DetectBaudRate() {
     // Write and Read AT command to detect the current baud rate
     std::vector<int> baud_rates = {115200, 921600, 460800, 230400, 57600, 38400, 19200, 9600};
     while (true) {
@@ -65,7 +65,7 @@ bool Ml307AtModem::DetectBaudRate() {
     return false;
 }
 
-bool Ml307AtModem::SetBaudRate(int new_baud_rate) {
+bool EC800AtModem::SetBaudRate(int new_baud_rate) {
     if (!DetectBaudRate()) {
         ESP_LOGE(TAG, "Failed to detect baud rate");
         return false;
@@ -84,7 +84,7 @@ bool Ml307AtModem::SetBaudRate(int new_baud_rate) {
     return false;
 }
 
-int Ml307AtModem::WaitForNetworkReady() {
+int EC800AtModem::WaitForNetworkReady() {
     ESP_LOGI(TAG, "Waiting for network ready...");
     Command("AT+CEREG=1", 1000);
     while (!network_ready_) {
@@ -102,56 +102,56 @@ int Ml307AtModem::WaitForNetworkReady() {
     return 0;
 }
 
-std::string Ml307AtModem::GetImei() {
+std::string EC800AtModem::GetImei() {
     if (Command("AT+CIMI")) {
         return response_;
     }
     return "";
 }
 
-std::string Ml307AtModem::GetIccid() {
+std::string EC800AtModem::GetIccid() {
     if (Command("AT+ICCID")) {
         return iccid_;
     }
     return "";
 }
 
-std::string Ml307AtModem::GetModuleName() {
+std::string EC800AtModem::GetModuleName() {
     if (Command("AT+CGMR")) {
         return response_;
     }
     return "";
 }
 
-std::string Ml307AtModem::GetCarrierName() {
+std::string EC800AtModem::GetCarrierName() {
     if (Command("AT+COPS?")) {
         return carrier_name_;
     }
     return "";
 }
 
-int Ml307AtModem::GetCsq() {
+int EC800AtModem::GetCsq() {
     if (Command("AT+CSQ")) {
         return csq_;
     }
     return -1;
 }
 
-void Ml307AtModem::SetDebug(bool debug) {
+void EC800AtModem::SetDebug(bool debug) {
     debug_ = debug;
 }
 
-std::list<CommandResponseCallback>::iterator Ml307AtModem::RegisterCommandResponseCallback(CommandResponseCallback callback) {
+std::list<CommandResponseCallback>::iterator EC800AtModem::RegisterCommandResponseCallback(CommandResponseCallback callback) {
     std::lock_guard<std::mutex> lock(mutex_ );
     return on_data_received_.insert(on_data_received_.end(), callback);
 }
 
-void Ml307AtModem::UnregisterCommandResponseCallback(std::list<CommandResponseCallback>::iterator iterator) {
+void EC800AtModem::UnregisterCommandResponseCallback(std::list<CommandResponseCallback>::iterator iterator) {
     std::lock_guard<std::mutex> lock(mutex_);
     on_data_received_.erase(iterator);
 }
 
-bool Ml307AtModem::Command(const std::string command, int timeout_ms) {
+bool EC800AtModem::Command(const std::string command, int timeout_ms) {
     std::lock_guard<std::mutex> lock(command_mutex_);
     if (debug_) {
         ESP_LOGI(TAG, ">> %.64s", command.c_str());
@@ -179,7 +179,7 @@ bool Ml307AtModem::Command(const std::string command, int timeout_ms) {
     return false;
 }
 
-void Ml307AtModem::EventTask() {
+void EC800AtModem::EventTask() {
     uart_event_t event;
     while (true) {
         if (xQueueReceive(event_queue_handle_, &event, portMAX_DELAY) == pdTRUE) {
@@ -206,7 +206,7 @@ void Ml307AtModem::EventTask() {
     }
 }
 
-void Ml307AtModem::ReceiveTask() {
+void EC800AtModem::ReceiveTask() {
     while (true) {
         auto bits = xEventGroupWaitBits(event_group_handle_, AT_EVENT_DATA_AVAILABLE, pdTRUE, pdFALSE, portMAX_DELAY);
         if (bits & AT_EVENT_DATA_AVAILABLE) {
@@ -223,7 +223,7 @@ void Ml307AtModem::ReceiveTask() {
     }
 }
 
-bool Ml307AtModem::ParseResponse() {
+bool EC800AtModem::ParseResponse() {
     auto end_pos = rx_buffer_.find("\r\n");
     if (end_pos == std::string::npos) {
         return false;
@@ -299,11 +299,11 @@ bool Ml307AtModem::ParseResponse() {
     return false;
 }
 
-void Ml307AtModem::OnMaterialReady(std::function<void()> callback) {
+void EC800AtModem::OnMaterialReady(std::function<void()> callback) {
     on_material_ready_ = callback;
 }
 
-void Ml307AtModem::NotifyCommandResponse(const std::string& command, const std::vector<AtArgumentValue>& arguments) {
+void EC800AtModem::NotifyCommandResponse(const std::string& command, const std::vector<AtArgumentValue>& arguments) {
     if (command == "CME ERROR") {
         xEventGroupSetBits(event_group_handle_, AT_EVENT_COMMAND_ERROR);
         return;
@@ -354,7 +354,7 @@ inline uint8_t CharToHex(char c) {
     return 0;  // 对于无效输入，返回0
 }
 
-void Ml307AtModem::EncodeHexAppend(std::string& dest, const char* data, size_t length) {
+void EC800AtModem::EncodeHexAppend(std::string& dest, const char* data, size_t length) {
     dest.reserve(dest.size() + length * 2);  // 预分配空间
     for (size_t i = 0; i < length; i++) {
         dest.push_back(hex_chars[(data[i] & 0xF0) >> 4]);
@@ -362,7 +362,7 @@ void Ml307AtModem::EncodeHexAppend(std::string& dest, const char* data, size_t l
     }
 }
 
-void Ml307AtModem::DecodeHexAppend(std::string& dest, const char* data, size_t length) {
+void EC800AtModem::DecodeHexAppend(std::string& dest, const char* data, size_t length) {
     dest.reserve(dest.size() + length / 2);  // 预分配空间
     for (size_t i = 0; i < length; i += 2) {
         char byte = (CharToHex(data[i]) << 4) | CharToHex(data[i + 1]);
@@ -370,23 +370,23 @@ void Ml307AtModem::DecodeHexAppend(std::string& dest, const char* data, size_t l
     }
 }
 
-std::string Ml307AtModem::EncodeHex(const std::string& data) {
+std::string EC800AtModem::EncodeHex(const std::string& data) {
     std::string encoded;
     EncodeHexAppend(encoded, data.c_str(), data.size());
     return encoded;
 }
 
-std::string Ml307AtModem::DecodeHex(const std::string& data) {
+std::string EC800AtModem::DecodeHex(const std::string& data) {
     std::string decoded;
     DecodeHexAppend(decoded, data.c_str(), data.size());
     return decoded;
 }
 
-void Ml307AtModem::Reset() {
+void EC800AtModem::Reset() {
     Command("AT+MREBOOT=0");
 }
 
-void Ml307AtModem::ResetConnections() {
+void EC800AtModem::ResetConnections() {
     // Reset HTTP instances
     Command("AT+MHTTPDEL=0");
     Command("AT+MHTTPDEL=1");

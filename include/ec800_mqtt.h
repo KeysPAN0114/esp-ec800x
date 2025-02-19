@@ -1,9 +1,9 @@
-#ifndef ML307_MQTT_H
-#define ML307_MQTT_H
+#ifndef EC800_MQTT_H
+#define EC800_MQTT_H
 
 #include "mqtt.h"
 
-#include "ml307_at_modem.h"
+#include "ec800_at_modem.h"
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/event_groups.h>
@@ -16,10 +16,10 @@
 #define MQTT_CONNECTED_EVENT BIT1
 #define MQTT_DISCONNECTED_EVENT BIT2
 
-class Ml307Mqtt : public Mqtt {
+class EC800Mqtt : public Mqtt {
 public:
-    Ml307Mqtt(Ml307AtModem& modem, int mqtt_id);
-    ~Ml307Mqtt();
+    EC800Mqtt(EC800AtModem& modem, int mqtt_id);
+    ~EC800Mqtt();
 
     bool Connect(const std::string broker_address, int broker_port, const std::string client_id, const std::string username, const std::string password);
     void Disconnect();
@@ -29,7 +29,7 @@ public:
     bool IsConnected();
 
 private:
-    Ml307AtModem& modem_;
+    EC800AtModem& modem_;
     int mqtt_id_;
     bool connected_ = false;
     EventGroupHandle_t event_group_handle_;

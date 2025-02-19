@@ -1,10 +1,10 @@
 idf_component_register(
     SRCS
-        "ml307_at_modem.cc"
-        "ml307_ssl_transport.cc"
-        "ml307_http.cc"
-        "ml307_mqtt.cc"
-        "ml307_udp.cc"
+        "ec800_at_modem.cc"
+        "ec800_ssl_transport.cc"
+        "ec800_http.cc"
+        "ec800_mqtt.cc"
+        "ec800_udp.cc"
         "web_socket.cc"
         "tls_transport.cc"
         "tcp_transport.cc"
