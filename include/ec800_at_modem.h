@@ -68,6 +68,8 @@ public:
     bool network_ready() const { return network_ready_; }
     int registration_state() const { return registration_state_; }
     int pin_ready() const { return pin_ready_; }
+
+    bool http_connect_flag_ = false;
 private:
     std::mutex mutex_;
     std::mutex command_mutex_;

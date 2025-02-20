@@ -96,21 +96,25 @@ int EC800AtModem::WaitForNetworkReady() {
             ESP_LOGI(TAG, "Registration denied");
             return -2;
         }
-        Command("AT+MIPCALL?");
+        // Command("AT+MIPCALL?");
+        Command("AT+CGATT?");
         xEventGroupWaitBits(event_group_handle_, AT_EVENT_NETWORK_READY, pdTRUE, pdFALSE, pdMS_TO_TICKS(1000));
     }
     return 0;
 }
 
+// 获取IMEI号
 std::string EC800AtModem::GetImei() {
-    if (Command("AT+CIMI")) {
+    // 发送AT+CGSN命令
+    if (Command("AT+CGSN")) {
+        // 返回响应
         return response_;
     }
     return "";
 }
 
 std::string EC800AtModem::GetIccid() {
-    if (Command("AT+ICCID")) {
+    if (Command("AT+QCCID")) {
         return iccid_;
     }
     return "";
@@ -291,6 +295,12 @@ bool EC800AtModem::ParseResponse() {
         rx_buffer_.erase(0, 7);
         xEventGroupSetBits(event_group_handle_, AT_EVENT_COMMAND_ERROR);
         return true;
+    } else if (rx_buffer_.size() >= 9 && rx_buffer_[0] == 'C' && rx_buffer_[1] == 'O' && rx_buffer_[2] == 'N' && rx_buffer_[3] == 'N' && rx_buffer_[4] == 'E') {
+        rx_buffer_.erase(0, 9);
+        // xEventGroupSetBits(event_group_handle_, AT_EVENT_COMMAND_ERROR);
+        http_connect_flag_ = true;
+        return true;
+
     } else {
         response_ = rx_buffer_.substr(0, end_pos);
         rx_buffer_.erase(0, end_pos + 2);
@@ -308,13 +318,19 @@ void EC800AtModem::NotifyCommandResponse(const std::string& command, const std::
         xEventGroupSetBits(event_group_handle_, AT_EVENT_COMMAND_ERROR);
         return;
     }
-    if (command == "MIPCALL" && arguments.size() >= 3) {
+/*     if (command == "MIPCALL" && arguments.size() >= 3) {
         if (arguments[1].int_value == 1) {
             ip_address_ = arguments[2].string_value;
             network_ready_ = true;
             xEventGroupSetBits(event_group_handle_, AT_EVENT_NETWORK_READY);
         }
-    } else if (command == "ICCID" && arguments.size() >= 1) {
+    } */
+    if (command == "CGATT" && arguments.size() >= 1) {
+        if( arguments[1].int_value == 1) {
+            network_ready_ = true;
+            xEventGroupSetBits(event_group_handle_, AT_EVENT_NETWORK_READY);
+        }
+    } else if (command == "QCCID" && arguments.size() >= 1) {
         iccid_ = arguments[0].string_value;
     } else if (command == "COPS" && arguments.size() >= 4) {
         carrier_name_ = arguments[2].string_value;

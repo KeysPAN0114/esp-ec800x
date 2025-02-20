@@ -40,12 +40,14 @@ EC800Http::EC800Http(EC800AtModem& modem) : modem_(modem) {
                     xEventGroupSetBits(event_group_handle_, EC800_HTTP_EVENT_ERROR);
                 }
             }
-        } else if (command == "MHTTPCREATE") {
-            http_id_ = arguments[0].int_value;
-            xEventGroupSetBits(event_group_handle_, EC800_HTTP_EVENT_INITIALIZED);
+        } else if (command == "QIACT") {
+            // http_id_ = arguments[0].int_value;
+            // xEventGroupSetBits(event_group_handle_, EC800_HTTP_EVENT_INITIALIZED);
         } else if (command == "FIFO_OVERFLOW") {
             xEventGroupSetBits(event_group_handle_, EC800_HTTP_EVENT_ERROR);
             Close();
+        } else if (command == "QHTTPREAD") {
+            xEventGroupSetBits(event_group_handle_, EC800_HTTP_EVENT_HEADERS_RECEIVED);
         }
     });
 }
@@ -121,51 +123,99 @@ bool EC800Http::Open(const std::string& method, const std::string& url, const st
         return false;
     }
 
-    // 创建HTTP连接
     char command[256];
-    sprintf(command, "AT+MHTTPCREATE=\"%s://%s\"", protocol_.c_str(), host_.c_str());
+    unsigned char timeout = 10;
+    unsigned char host_len = protocol_.length() + 3 + host_.length();
+    if (host_len > 200) {
+        ESP_LOGE(TAG, "URL长度超过限制");
+        return false;
+    }
+
+    //设置需要访问的URL,步骤:配置PDP上下文->设置URL长度，超时时间->等待模组回复CONNECT->发送URL
+    //配置PDP上下文ID为1
+    sprintf(command,"AT+QHTTPCFG=\"%s\",%d","contextid",1);
+    modem_.Command(command);
+    //启动输出HTTP(S)响应头信息
+    sprintf(command,"AT+QHTTPCFG=\"%s\",%d","responseheader",0);
+    modem_.Command(command);
+    //查询PDP上下文状态
+    sprintf(command,"AT+QIACT?");
     if (!modem_.Command(command)) {
+        ESP_LOGE(TAG, "查询PDP上下文状态失败");
+        return false;
+    }
+    //配置 PDP 上下文为 1，APN 为中国联通的"UNINET"。
+    sprintf(command,"AT+QICSGP=1,1,"UNINET","","",1");
+    modem_.Command(command);
+    //激活 PDP 上下文
+    sprintf(command,"AT+QIACT=1");
+    modem_.Command(command);
+
+    //假如是HTTPS协议，需要配置SSL
+    if(protocol_ == "https") {
+        sprintf(command,"AT+QHTTPCFG=\"sslctxid\",1");
+        modem_.Command(command);
+        sprintf(command,"AT+QSSLCFG=\"sslversion\",1,1");
+        modem_.Command(command);
+        sprintf(command,"AT+QSSLCFG=\"ciphersuite\",1,0x0005");
+        modem_.Command(command);
+        sprintf(command,"AT+QSSLCFG=\"seclevel\",1,0");
+        modem_.Command(command);
+    }
+
+    sprintf(command,"AT+QHTTPURL=%d,%d",host_len,80);
+    modem_.Command(command);
+    while (!modem_.http_connect_flag_)
+    {
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        timeout--;
+        if (timeout == 0) {
+            ESP_LOGE(TAG, "等待模组回复CONNECT超时");
+            return false;
+        }
+    }
+
+    // 创建HTTP连接
+    char http_url[256];
+    sprintf(http_url, "%s://%s", protocol_.c_str(), host_.c_str());
+    if (!modem_.Command(http_url)) {
         ESP_LOGE(TAG, "创建HTTP连接失败");
         return false;
     }
 
-    auto bits = xEventGroupWaitBits(event_group_handle_, EC800_HTTP_EVENT_INITIALIZED, pdTRUE, pdFALSE, pdMS_TO_TICKS(HTTP_CONNECT_TIMEOUT_MS));
-    if (!(bits & EC800_HTTP_EVENT_INITIALIZED)) {
-        ESP_LOGE(TAG, "等待HTTP连接创建超时");
-        return false;
-    }
+    // auto bits = xEventGroupWaitBits(event_group_handle_, EC800_HTTP_EVENT_INITIALIZED, pdTRUE, pdFALSE, pdMS_TO_TICKS(HTTP_CONNECT_TIMEOUT_MS));
+    // if (!(bits & EC800_HTTP_EVENT_INITIALIZED)) {
+    //     ESP_LOGE(TAG, "等待HTTP连接创建超时");
+    //     return false;
+    // }
+
     connected_ = true;
     ESP_LOGI(TAG, "HTTP 连接已创建，ID: %d", http_id_);
 
-    if (protocol_ == "https") {
-        sprintf(command, "AT+MHTTPCFG=\"ssl\",%d,1,0", http_id_);
-        modem_.Command(command);
-    }
-
     // Set HEX encoding OFF
-    sprintf(command, "AT+MHTTPCFG=\"encoding\",%d,0,0", http_id_);
-    modem_.Command(command);
+    // sprintf(command, "AT+MHTTPCFG=\"encoding\",%d,0,0", http_id_);
+    // modem_.Command(command);
 
     // Flow control to 1024 bytes per 100ms
-    sprintf(command, "AT+MHTTPCFG=\"fragment\",%d,1024,100", http_id_);
-    modem_.Command(command);
+    // sprintf(command, "AT+MHTTPCFG=\"fragment\",%d,1024,100", http_id_);
+    // modem_.Command(command);
 
     // Set headers
-    for (const auto& header : headers_) {
-        auto line = header.first + ": " + header.second;
-        sprintf(command, "AT+MHTTPCFG=\"header\",%d,%s", http_id_, line.c_str());
-        modem_.Command(command);
-    }
+    // for (const auto& header : headers_) {
+    //     auto line = header.first + ": " + header.second;
+    //     sprintf(command, "AT+MHTTPCFG=\"header\",%d,%s", http_id_, line.c_str());
+    //     modem_.Command(command);
+    // }
 
-    if (!content.empty() && method_ == "POST") {
-        sprintf(command, "AT+MHTTPCONTENT=%d,0,%zu", http_id_, content.size());
-        modem_.Command(command);
-        modem_.Command(content);
-    }
+    // if (!content.empty() && method_ == "POST") {
+    //     sprintf(command, "AT+MHTTPCONTENT=%d,0,%zu", http_id_, content.size());
+    //     modem_.Command(command);
+    //     modem_.Command(content);
+    // }
 
     // Set HEX encoding ON
-    sprintf(command, "AT+MHTTPCFG=\"encoding\",%d,1,1", http_id_);
-    modem_.Command(command);
+    // sprintf(command, "AT+MHTTPCFG=\"encoding\",%d,1,1", http_id_);
+    // modem_.Command(command);
 
     // Send request
     // method to value: 1. GET 2. POST 3. PUT 4. DELETE 5. HEAD
@@ -173,12 +223,26 @@ bool EC800Http::Open(const std::string& method, const std::string& url, const st
     int method_value = 1;
     for (int i = 0; i < 6; i++) {
         if (strcmp(methods[i], method_.c_str()) == 0) {
+            ESP_LOGI(TAG, "HTTP method: %s", methods[i]);
             method_value = i;
             break;
         }
     }
-    sprintf(command, "AT+MHTTPREQUEST=%d,%d,0,", http_id_, method_value);
-    modem_.Command(std::string(command) + modem_.EncodeHex(path_));
+
+    if (strcmp(methods[method_value],"GET") == 0) {
+        sprintf(command, "AT+QHTTPGET=80");
+        modem_.Command(command);
+        sprintf(command, "AT+QHTTPREAD=80");
+        modem_.Command(command);
+    } else if(strcmp(methods[method_value],"POST") == 0) {
+        sprintf(command, "AT+QHTTPPOST=%d,80,80", content_length_);
+        modem_.Command(command);
+        modem_.Command(content);
+        sprintf(command, "AT+QHTTPREAD=80");
+        modem_.Command(command);
+    }
+    // sprintf(command, "AT+MHTTPREQUEST=%d,%d,0,", http_id_, method_value);
+    // modem_.Command(std::string(command) + modem_.EncodeHex(path_));
 
     // Wait for headers
     bits = xEventGroupWaitBits(event_group_handle_, EC800_HTTP_EVENT_HEADERS_RECEIVED | EC800_HTTP_EVENT_ERROR, pdTRUE, pdFALSE, pdMS_TO_TICKS(HTTP_CONNECT_TIMEOUT_MS));
