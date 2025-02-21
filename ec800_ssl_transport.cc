@@ -9,9 +9,9 @@ EC800SslTransport::EC800SslTransport(EC800AtModem& modem, int tcp_id) : modem_(m
     event_group_handle_ = xEventGroupCreate();
 
     command_callback_it_ = modem_.RegisterCommandResponseCallback([this](const std::string& command, const std::vector<AtArgumentValue>& arguments) {
-        if (command == "MIPOPEN" && arguments.size() == 2) {
+        if (command == "QISTATE" && arguments.size() >= 2) {
             if (arguments[0].int_value == tcp_id_) {
-                if (arguments[1].int_value == 0) {
+                if (arguments[1].int_value == 3) {
                     connected_ = true;
                     xEventGroupClearBits(event_group_handle_, EC800_SSL_TRANSPORT_DISCONNECTED | EC800_SSL_TRANSPORT_ERROR);
                     xEventGroupSetBits(event_group_handle_, EC800_SSL_TRANSPORT_CONNECTED);
@@ -25,23 +25,22 @@ EC800SslTransport::EC800SslTransport(EC800AtModem& modem, int tcp_id) : modem_(m
                 connected_ = false;
                 xEventGroupSetBits(event_group_handle_, EC800_SSL_TRANSPORT_DISCONNECTED);
             }
-        } else if (command == "MIPSEND" && arguments.size() == 2) {
-            if (arguments[0].int_value == tcp_id_) {
-                xEventGroupSetBits(event_group_handle_, EC800_SSL_TRANSPORT_SEND_COMPLETE);
-            }
-        } else if (command == "MIPURC" && arguments.size() == 4) {
-            if (arguments[1].int_value == tcp_id_) {
-                if (arguments[0].string_value == "rtcp") {
+        } else if (command == "QISEND" && arguments.size() >= 2) {
+            xEventGroupSetBits(event_group_handle_, EC800_SSL_TRANSPORT_SEND_COMPLETE);
+        } else if (command == "QIURC" && arguments.size() >= 2) {
+                if (arguments[0].string_value == "recv") {
                     std::lock_guard<std::mutex> lock(mutex_);
-                    modem_.DecodeHexAppend(rx_buffer_, arguments[3].string_value.c_str(), arguments[3].string_value.size());
                     xEventGroupSetBits(event_group_handle_, EC800_SSL_TRANSPORT_RECEIVE);
-                } else if (arguments[0].string_value == "disconn") {
+                } else if (arguments[0].string_value == "closed") {
                     connected_ = false;
                     xEventGroupSetBits(event_group_handle_, EC800_SSL_TRANSPORT_DISCONNECTED);
                 } else {
                     ESP_LOGE(TAG, "Unknown MIPURC command: %s", arguments[0].string_value.c_str());
                 }
-            }
+                modem_.Command(std::string("AT+QIRD=") + std::to_string(tcp_id_) + "," + std::to_string(arguments[1].int_value));
+        } else if (command == "QIRD" && arguments.size() >= 2) {
+                std::lock_guard<std::mutex> lock(mutex_);
+                modem_.DecodeHexAppend(rx_buffer_, arguments[3].string_value.c_str(), arguments[3].string_value.size());
         } else if (command == "MIPSTATE" && arguments.size() == 5) {
             if (arguments[0].int_value == tcp_id_) {
                 if (arguments[4].string_value == "INITIAL") {
@@ -82,28 +81,31 @@ bool EC800SslTransport::Connect(const char* host, int port) {
         Disconnect();
     }
 
+    // 场景激活
+    sprintf(command, "AT+QIACT=1");
+    modem_.Command(command);
+    sprintf(command, "AT+QIACT?");
+    if (!modem_.Command(command)) {
+        ESP_LOGE(TAG, "");
+        return false;
+    }
+
     // 设置 SSL 配置
-    sprintf(command, "AT+MSSLCFG=\"auth\",0,0");
+    sprintf(command, "AT+QSSLCFG=\"seclevel\",0,0");
     if (!modem_.Command(command)) {
         ESP_LOGE(TAG, "Failed to set SSL configuration");
         return false;
     }
 
-    sprintf(command, "AT+MIPCFG=\"ssl\",%d,1,0", tcp_id_);
-    if (!modem_.Command(command)) {
-        ESP_LOGE(TAG, "Failed to set TCP SSL configuration");
-        return false;
-    }
-
     // 打开 TCP 连接
-    sprintf(command, "AT+MIPOPEN=%d,\"TCP\",\"%s\",%d,,0", tcp_id_, host, port);
+    sprintf(command, "AT+QIOPEN=1,%d,\"TCP\",\"%s\",%d,0,0", tcp_id_, host, port);
     if (!modem_.Command(command)) {
         ESP_LOGE(TAG, "Failed to open TCP connection");
         return false;
     }
 
-    // 使用 HEX 编码
-    sprintf(command, "AT+MIPCFG=\"encoding\",%d,1,1", tcp_id_);
+    // 查询连接状态
+    sprintf(command, "AT+QISTATE=%d,0", tcp_id_);
     if (!modem_.Command(command)) {
         ESP_LOGE(TAG, "Failed to set HEX encoding");
         return false;
@@ -124,7 +126,7 @@ void EC800SslTransport::Disconnect() {
     }
     connected_ = false;
     xEventGroupSetBits(event_group_handle_, EC800_SSL_TRANSPORT_DISCONNECTED);
-    std::string command = "AT+MIPCLOSE=" + std::to_string(tcp_id_);
+    std::string command = "AT+QICLOSE=" + std::to_string(tcp_id_);
     modem_.Command(command);
 }
 
@@ -141,7 +143,7 @@ int EC800SslTransport::Send(const char* data, size_t length) {
 
         // 重置command并构建新的命令
         command.clear();
-        command = "AT+MIPSEND=" + std::to_string(tcp_id_) + "," + std::to_string(chunk_size) + ",";
+        command = "AT+QISENDEX=" + std::to_string(tcp_id_) + "," ;
 
         // 直接在command字符串上进行十六进制编码
         modem_.EncodeHexAppend(command, data + total_sent, chunk_size);
@@ -152,6 +154,10 @@ int EC800SslTransport::Send(const char* data, size_t length) {
             xEventGroupSetBits(event_group_handle_, EC800_SSL_TRANSPORT_DISCONNECTED);
             return -1;
         }
+
+        command.clear();
+        command = "AT+QISEND=0,0";
+        modem_.Command(command);
 
         auto bits = xEventGroupWaitBits(event_group_handle_, EC800_SSL_TRANSPORT_SEND_COMPLETE, pdTRUE, pdFALSE, pdMS_TO_TICKS(SSL_CONNECT_TIMEOUT_MS));
         if (!(bits & EC800_SSL_TRANSPORT_SEND_COMPLETE)) {

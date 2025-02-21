@@ -41,9 +41,24 @@ EC800Mqtt::EC800Mqtt(EC800AtModem& modem, int mqtt_id) : modem_(modem), mqtt_id_
                     ESP_LOGI(TAG, "unhandled MQTT event: %s", type.c_str());
                 }
             }
-        } else if (command == "MQTTSTATE" && arguments.size() == 1) {
-            connected_ = arguments[0].int_value != 3;
+        } else if (command == "QMTCONN" && arguments.size() == 2) {
+            connected_ = arguments[1].int_value != 4;
             xEventGroupSetBits(event_group_handle_, MQTT_INITIALIZED_EVENT);
+        } else if (command == "QMTCONN" && arguments.size() >= 3) {
+            if (arguments[0].int_value == mqtt_id_) {
+                if (arguments[1].int_value == 0 && arguments[2].int_value == 0) {
+                    ESP_LOGI(TAG, "MQTT connection state: %s", ErrorToString(arguments[2].int_value).c_str());
+                    xEventGroupSetBits(event_group_handle_, MQTT_CONNECTED_EVENT);
+                } else {
+                    if (connected_) {
+                        connected_ = false;
+                        if (on_disconnected_callback_) {
+                            on_disconnected_callback_();
+                        }
+                    }
+                    xEventGroupSetBits(event_group_handle_, MQTT_DISCONNECTED_EVENT);
+                }
+            }
         }
     });
 }
@@ -59,6 +74,7 @@ bool EC800Mqtt::Connect(const std::string broker_address, int broker_port, const
     client_id_ = client_id;
     username_ = username;
     password_ = password;
+    char command[256];
 
     EventBits_t bits;
     if (IsConnected()) {
@@ -79,25 +95,40 @@ bool EC800Mqtt::Connect(const std::string broker_address, int broker_port, const
     }
 
     // Set clean session
-    if (!modem_.Command(std::string("AT+MQTTCFG=\"clean\",") + std::to_string(mqtt_id_) + ",1")) {
-        ESP_LOGE(TAG, "Failed to set MQTT clean session");
+    // if (!modem_.Command(std::string("AT+MQTTCFG=\"clean\",") + std::to_string(mqtt_id_) + ",1")) {
+    //     ESP_LOGE(TAG, "Failed to set MQTT clean session");
+    //     return false;
+    // }
+
+    if (!modem_.Command(std::string("AT+MQTTCFG=\"version\",") + std::to_string(mqtt_id_) + ",4")) {
+        ESP_LOGE(TAG, "Failed to set MQTT protocol version");
+        return false;
+    }
+
+    if (!modem_.Command(std::string("AT+MQTTCFG=\"aliauth\",") + std::to_string(mqtt_id_))) {
+        ESP_LOGE(TAG, "Failed to set MQTT platform");
         return false;
     }
 
     // Set keep alive
-    if (!modem_.Command(std::string("AT+MQTTCFG=\"pingreq\",") + std::to_string(mqtt_id_) + "," + std::to_string(keep_alive_seconds_))) {
+    if (!modem_.Command(std::string("AT+QMTCFG=\"qmtping\",") + std::to_string(mqtt_id_) + "," + std::to_string(keep_alive_seconds_))) {
         ESP_LOGE(TAG, "Failed to set MQTT keep alive");
         return false;
     }
 
     // Set HEX encoding
-    if (!modem_.Command("AT+MQTTCFG=\"encoding\"," + std::to_string(mqtt_id_) + ",1,1")) {
+    if (!modem_.Command("AT+QMTCFG=\"dataformat\"," + std::to_string(mqtt_id_) + ",1,1")) {
+        ESP_LOGE(TAG, "Failed to set MQTT to use HEX encoding");
+        return false;
+    }
+
+    if (!modem_.Command("AT+QMTOPEN=" + std::to_string(mqtt_id_) + ",\"" + broker_address + "\"," + std::to_string(broker_port))) {
         ESP_LOGE(TAG, "Failed to set MQTT to use HEX encoding");
         return false;
     }
 
     // 创建MQTT连接
-    std::string command = "AT+MQTTCONN=" + std::to_string(mqtt_id_) + ",\"" + broker_address_ + "\"," + std::to_string(broker_port_) + ",\"" + client_id_ + "\",\"" + username_ + "\",\"" + password_ + "\"";
+    std::string command = "AT+QMTCONN=" + std::to_string(mqtt_id_) + ",\"" + client_id_ + "\",\"" + username_ + "\",\"" + password_ + "\"";
     if (!modem_.Command(command)) {
         ESP_LOGE(TAG, "Failed to create MQTT connection");
         return false;
@@ -119,7 +150,7 @@ bool EC800Mqtt::Connect(const std::string broker_address, int broker_port, const
 
 bool EC800Mqtt::IsConnected() {
     // 检查这个 id 是否已经连接
-    modem_.Command(std::string("AT+MQTTSTATE=") + std::to_string(mqtt_id_));
+    modem_.Command(std::string("AT+QMTCONN=") + std::to_string(mqtt_id_));
     auto bits = xEventGroupWaitBits(event_group_handle_, MQTT_INITIALIZED_EVENT, pdTRUE, pdFALSE, pdMS_TO_TICKS(MQTT_CONNECT_TIMEOUT_MS));
     if (!(bits & MQTT_INITIALIZED_EVENT)) {
         ESP_LOGE(TAG, "Failed to initialize MQTT connection");
@@ -132,24 +163,25 @@ void EC800Mqtt::Disconnect() {
     if (!connected_) {
         return;
     }
-    modem_.Command(std::string("AT+MQTTDISC=") + std::to_string(mqtt_id_));
+    modem_.Command(std::string("AT+QMTDISC=") + std::to_string(mqtt_id_));
 }
 
 bool EC800Mqtt::Publish(const std::string topic, const std::string payload, int qos) {
     if (!connected_) {
         return false;
     }
-    std::string command = "AT+MQTTPUB=" + std::to_string(mqtt_id_) + ",\"" + topic + "\",";
-    command += std::to_string(qos) + ",0,0,";
-    command += std::to_string(payload.size()) + "," + modem_.EncodeHex(payload);
-    return modem_.Command(command);
+    std::string command = "AT+QMTPUBEX=" + std::to_string(mqtt_id_) + "," + std::to_string(mqtt_id_) + ",";
+    command += std::to_string(qos) + ",0," + "\"" + topic + "\",";
+    command += std::to_string(payload.size());
+    modem_.Command(command);;
+    return modem_.Command(modem_.EncodeHex(payload));
 }
 
 bool EC800Mqtt::Subscribe(const std::string topic, int qos) {
     if (!connected_) {
         return false;
     }
-    std::string command = "AT+MQTTSUB=" + std::to_string(mqtt_id_) + ",\"" + topic + "\"," + std::to_string(qos);
+    std::string command = "AT+MQTTSUB=" + std::to_string(mqtt_id_) + "," + std::to_string(mqtt_id_) + ",\"" + topic + "\"," + std::to_string(qos);
     return modem_.Command(command);
 }
 
@@ -157,28 +189,20 @@ bool EC800Mqtt::Unsubscribe(const std::string topic) {
     if (!connected_) {
         return false;
     }
-    std::string command = "AT+MQTTUNSUB=" + std::to_string(mqtt_id_) + ",\"" + topic + "\"";
+    std::string command = "AT+MQTTUNSUB=" + std::to_string(mqtt_id_) + "," + std::to_string(mqtt_id_) + ",\"" + topic + "\"";
     return modem_.Command(command);
 }
 
 std::string EC800Mqtt::ErrorToString(int error_code) {
     switch (error_code) {
-        case 0:
-            return "连接成功";
         case 1:
-            return "正在重连";
+            return "MQTT初始化";
         case 2:
-            return "断开：用户主动断开";
+            return "MQTT正在连接";
         case 3:
-            return "断开：拒绝连接（协议版本、标识符、用户名或密码错误）";
+            return "MQTT已经连接成功";
         case 4:
-            return "断开：服务器断开";
-        case 5:
-            return "断开：Ping包超时断开";
-        case 6:
-            return "断开：网络异常断开";
-        case 255:
-            return "断开：未知错误";
+            return "MQTT正在断开连接";
         default:
             return "未知错误";
     }
