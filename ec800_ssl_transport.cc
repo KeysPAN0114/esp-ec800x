@@ -98,7 +98,7 @@ bool EC800SslTransport::Connect(const char* host, int port) {
     }
 
     // 打开 TCP 连接
-    sprintf(command, "AT+QIOPEN=1,%d,\"TCP\",\"%s\",%d,0,0", tcp_id_, host.c_str(), port);
+    sprintf(command, "AT+QIOPEN=1,%d,\"TCP\",\"%s\",%d,0,0", tcp_id_, host, port);
     if (!modem_.Command(command)) {
         ESP_LOGE(TAG, "Failed to open TCP connection");
         return false;
