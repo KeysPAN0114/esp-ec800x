@@ -9,7 +9,7 @@ EC800Udp::EC800Udp(EC800AtModem& modem, int udp_id) : modem_(modem), udp_id_(udp
     event_group_handle_ = xEventGroupCreate();
 
     command_callback_it_ = modem_.RegisterCommandResponseCallback([this](const std::string& command, const std::vector<AtArgumentValue>& arguments) {
-        if (command == "MIPOPEN" && arguments.size() == 2) {
+        if (command == "QISTATE" && arguments.size() == 2) {
             if (arguments[0].int_value == udp_id_) {
                 if (arguments[1].int_value == 0) {
                     connected_ = true;
@@ -20,28 +20,27 @@ EC800Udp::EC800Udp(EC800AtModem& modem, int udp_id) : modem_(modem), udp_id_(udp
                     xEventGroupSetBits(event_group_handle_, EC800_UDP_ERROR);
                 }
             }
-        } else if (command == "MIPCLOSE" && arguments.size() == 1) {
+        } else if (command == "QISTATE" && arguments.size() == 1) {
             if (arguments[0].int_value == udp_id_) {
                 connected_ = false;
                 xEventGroupSetBits(event_group_handle_, EC800_UDP_DISCONNECTED);
             }
-        } else if (command == "MIPSEND" && arguments.size() == 2) {
+        } else if (command == "QISEND" && arguments.size() == 2) {
             if (arguments[0].int_value == udp_id_) {
                 xEventGroupSetBits(event_group_handle_, EC800_UDP_SEND_COMPLETE);
             }
-        } else if (command == "MIPURC" && arguments.size() == 4) {
-            if (arguments[1].int_value == udp_id_) {
+        } else if (command == "QIURC" && arguments.size() == 2) {
                 if (arguments[0].string_value == "rudp") {
                     if (message_callback_) {
                         message_callback_(modem_.DecodeHex(arguments[3].string_value));
                     }
-                } else if (arguments[0].string_value == "disconn") {
+                } else if (arguments[0].string_value == "closed") {
                     connected_ = false;
                     xEventGroupSetBits(event_group_handle_, EC800_UDP_DISCONNECTED);
                 } else {
                     ESP_LOGE(TAG, "Unknown MIPURC command: %s", arguments[0].string_value.c_str());
                 }
-            }
+                modem_.Command(std::string("AT+QIRD=") + std::to_string(tcp_id_) + "," + std::to_string(arguments[1].int_value));
         } else if (command == "MIPSTATE" && arguments.size() == 5) {
             if (arguments[0].int_value == udp_id_) {
                 if (arguments[4].string_value == "INITIAL") {
@@ -84,14 +83,14 @@ bool EC800Udp::Connect(const std::string& host, int port) {
     }
 
     // 打开 TCP 连接
-    sprintf(command, "AT+MIPOPEN=%d,\"UDP\",\"%s\",%d,,0", udp_id_, host.c_str(), port);
+    sprintf(command, "AT+QIOPEN=1,%d,\"TCP\",\"%s\",%d,0,0", udp_id_, host.c_str(), port);
     if (!modem_.Command(command)) {
         ESP_LOGE(TAG, "Failed to open UDP connection");
         return false;
     }
 
-    // 使用 HEX 编码
-    sprintf(command, "AT+MIPCFG=\"encoding\",%d,1,1", udp_id_);
+    // 查询连接状态
+    sprintf(command, "AT+QISTATE=%d,0", udp_id_);
     if (!modem_.Command(command)) {
         ESP_LOGE(TAG, "Failed to set HEX encoding");
         return false;
@@ -112,7 +111,7 @@ void EC800Udp::Disconnect() {
         return;
     }
     connected_ = false;
-    modem_.Command("AT+MIPCLOSE=" + std::to_string(udp_id_));
+    modem_.Command("AT+QICLOSE=" + std::to_string(udp_id_));
 }
 
 int EC800Udp::Send(const std::string& data) {
@@ -129,7 +128,7 @@ int EC800Udp::Send(const std::string& data) {
     }
 
     // 在循环外预先分配command
-    std::string command = "AT+MIPSEND=" + std::to_string(udp_id_) + "," + std::to_string(data.size()) + ",";
+    std::string command = "AT+QISENDEX=" + std::to_string(udp_id_) + "," ;
 
     // 直接在command字符串上进行十六进制编码
     modem_.EncodeHexAppend(command, data.c_str(), data.size());
@@ -138,5 +137,10 @@ int EC800Udp::Send(const std::string& data) {
         ESP_LOGE(TAG, "发送数据块失败");
         return -1;
     }
+
+    command.clear();
+    command = "AT+QISEND=0,0";
+    modem_.Command(command);
+
     return data.size();
 }
