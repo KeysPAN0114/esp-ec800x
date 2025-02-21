@@ -74,7 +74,6 @@ bool EC800Mqtt::Connect(const std::string broker_address, int broker_port, const
     client_id_ = client_id;
     username_ = username;
     password_ = password;
-    char command[256];
 
     EventBits_t bits;
     if (IsConnected()) {
