@@ -40,7 +40,7 @@ EC800Udp::EC800Udp(EC800AtModem& modem, int udp_id) : modem_(modem), udp_id_(udp
                 } else {
                     ESP_LOGE(TAG, "Unknown MIPURC command: %s", arguments[0].string_value.c_str());
                 }
-                modem_.Command(std::string("AT+QIRD=") + std::to_string(tcp_id_) + "," + std::to_string(arguments[1].int_value));
+                modem_.Command(std::string("AT+QIRD=") + std::to_string(udp_id_) + "," + std::to_string(arguments[1].int_value));
         } else if (command == "MIPSTATE" && arguments.size() == 5) {
             if (arguments[0].int_value == udp_id_) {
                 if (arguments[4].string_value == "INITIAL") {
