@@ -145,7 +145,7 @@ bool EC800Http::Open(const std::string& method, const std::string& url, const st
         return false;
     }
     //配置 PDP 上下文为 1，APN 为中国联通的"UNINET"。
-    sprintf(command,"AT+QICSGP=1,1,"UNINET","","",1");
+    sprintf(command,"AT+QICSGP=1,1,\"UNINET\",\"\",\"\",1");
     modem_.Command(command);
     //激活 PDP 上下文
     sprintf(command,"AT+QIACT=1");
@@ -245,7 +245,7 @@ bool EC800Http::Open(const std::string& method, const std::string& url, const st
     // modem_.Command(std::string(command) + modem_.EncodeHex(path_));
 
     // Wait for headers
-    bits = xEventGroupWaitBits(event_group_handle_, EC800_HTTP_EVENT_HEADERS_RECEIVED | EC800_HTTP_EVENT_ERROR, pdTRUE, pdFALSE, pdMS_TO_TICKS(HTTP_CONNECT_TIMEOUT_MS));
+    auto bits = xEventGroupWaitBits(event_group_handle_, EC800_HTTP_EVENT_HEADERS_RECEIVED | EC800_HTTP_EVENT_ERROR, pdTRUE, pdFALSE, pdMS_TO_TICKS(HTTP_CONNECT_TIMEOUT_MS));
     if (bits & EC800_HTTP_EVENT_ERROR) {
         ESP_LOGE(TAG, "HTTP请求错误: %s", ErrorCodeToString(error_code_).c_str());
         return false;

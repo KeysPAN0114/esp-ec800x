@@ -19,17 +19,17 @@ This project is initially created for https://github.com/78/xiaozhi-esp32
 
 ```cpp
 #include "esp_log.h"
-#include "Ml307AtModem.h"
-#include "Ml307SslTransport.h"
-#include "Ml307Http.h"
-#include "Ml307Mqtt.h"
+#include "ec800AtModem.h"
+#include "ec800slTransport.h"
+#include "ec800Http.h"
+#include "ec800Mqtt.h"
 
-static const char *TAG = "ML307";
+static const char *TAG = "ec800";
 
-void TestHttp(Ml307AtModem& modem) {
+void TestHttp(EC800AtModem& modem) {
     ESP_LOGI(TAG, "Starting HTTP test");
 
-    Ml307Http http(modem);
+    EC800Http http(modem);
     http.SetHeader("User-Agent", "Xiaozhi/1.0.0");
     http.Open("GET", "https://xiaozhi.me/");
     
@@ -39,10 +39,10 @@ void TestHttp(Ml307AtModem& modem) {
     http.Close();
 }
 
-void TestMqtt(Ml307AtModem& modem) {
+void TestMqtt(EC800AtModem& modem) {
     ESP_LOGI(TAG, "Starting MQTT test");
 
-    Ml307Mqtt mqtt(modem, 0);
+    EC800Mqtt mqtt(modem, 0);
     if (!mqtt.Connect("broker.emqx.io", 1883, "emqx", "public", "")) {
         ESP_LOGE(TAG, "Failed to connect to MQTT broker");
         return;
@@ -56,10 +56,10 @@ void TestMqtt(Ml307AtModem& modem) {
     mqtt.Disconnect();
 }
 
-void TestWebSocket(Ml307AtModem& modem) {
+void TestWebSocket(EC800AtModem& modem) {
     ESP_LOGI(TAG, "Starting WebSocket test");
 
-    WebSocket ws(new Ml307SslTransport(modem, 0));
+    WebSocket ws(new EC800SslTransport(modem, 0));
     ws.SetHeader("Protocol-Version", "2");
 
     ws.OnConnected([]() {
@@ -92,7 +92,7 @@ void TestWebSocket(Ml307AtModem& modem) {
 
 
 extern "C" void app_main(void) {
-    Ml307AtModem modem(GPIO_NUM_13, GPIO_NUM_14, 2048);
+    EC800AtModem modem(GPIO_NUM_13, GPIO_NUM_14, 2048);
     modem.SetDebug(true);
     modem.SetBaudRate(921600);
 
