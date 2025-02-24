@@ -76,21 +76,18 @@ bool EC800Mqtt::Connect(const std::string broker_address, int broker_port, const
     password_ = password;
 
     EventBits_t bits;
-    if (IsConnected()) {
-        // 断开之前的连接
-        Disconnect();
-        bits = xEventGroupWaitBits(event_group_handle_, MQTT_DISCONNECTED_EVENT, pdTRUE, pdFALSE, pdMS_TO_TICKS(MQTT_CONNECT_TIMEOUT_MS));
-        if (!(bits & MQTT_DISCONNECTED_EVENT)) {
-            ESP_LOGE(TAG, "Failed to disconnect from previous connection");
-            return false;
-        }
-    }
+    // if (IsConnected()) {
+    //     // 断开之前的连接
+    //     Disconnect();
+    //     bits = xEventGroupWaitBits(event_group_handle_, MQTT_DISCONNECTED_EVENT, pdTRUE, pdFALSE, pdMS_TO_TICKS(MQTT_CONNECT_TIMEOUT_MS));
+    //     if (!(bits & MQTT_DISCONNECTED_EVENT)) {
+    //         ESP_LOGE(TAG, "Failed to disconnect from previous connection");
+    //         return false;
+    //     }
+    // }
 
     if (broker_port_ == 8883) {
-        if (!modem_.Command(std::string("AT+QMTCFG=\"ssl\",") + std::to_string(mqtt_id_) + ",1,1")) {
-            ESP_LOGE(TAG, "Failed to set MQTT to use SSL");
-            return false;
-        }
+        modem_.Command(std::string("AT+QMTCFG=\"ssl\",") + std::to_string(mqtt_id_) + ",1,1");
     }
 
     // Set clean session
@@ -109,7 +106,7 @@ bool EC800Mqtt::Connect(const std::string broker_address, int broker_port, const
     // Set HEX encoding
     modem_.Command("AT+QMTCFG=\"dataformat\"," + std::to_string(mqtt_id_) + ",1,1");
 
-    modem_.Command("AT+QMTOPEN=" + std::to_string(mqtt_id_) + ",\"" + broker_address + "\"," + std::to_string(broker_port));
+    modem_.Command("AT+QMTOPEN=" + std::to_string(mqtt_id_) + ",\"" + broker_address_ + "\"," + std::to_string(broker_port_));
 
     // 创建MQTT连接
     modem_.Command("AT+QMTCONN=" + std::to_string(mqtt_id_) + ",\"" + client_id_ + "\",\"" + username_ + "\",\"" + password_ + "\"");
