@@ -104,12 +104,12 @@ bool EC800Mqtt::Connect(const std::string broker_address, int broker_port, const
     modem_.Command(std::string("AT+QMTCFG=\"aliauth\",") + std::to_string(mqtt_id_));
 
     // Set keep alive
-    modem_.Command(std::string("AT+QMTCFG=\"qmtping\",") + std::to_string(mqtt_id_) + "," + std::to_string(keep_alive_seconds_))
+    modem_.Command(std::string("AT+QMTCFG=\"qmtping\",") + std::to_string(mqtt_id_) + "," + std::to_string(keep_alive_seconds_));
 
     // Set HEX encoding
     modem_.Command("AT+QMTCFG=\"dataformat\"," + std::to_string(mqtt_id_) + ",1,1");
 
-    modem_.Command("AT+QMTOPEN=" + std::to_string(mqtt_id_) + ",\"" + broker_address + "\"," + std::to_string(broker_port))
+    modem_.Command("AT+QMTOPEN=" + std::to_string(mqtt_id_) + ",\"" + broker_address + "\"," + std::to_string(broker_port));
 
     // 创建MQTT连接
     std::string command = "AT+QMTCONN=" + std::to_string(mqtt_id_) + ",\"" + client_id_ + "\",\"" + username_ + "\",\"" + password_ + "\"";
