@@ -110,10 +110,10 @@ bool EC800Mqtt::Connect(const std::string broker_address, int broker_port, const
 
     // 创建MQTT连接
     modem_.Command("AT+QMTCONN=" + std::to_string(mqtt_id_) + ",\"" + client_id_ + "\",\"" + username_ + "\",\"" + password_ + "\"");
-    if (!modem_.Command(command)) {
-        ESP_LOGE(TAG, "Failed to create MQTT connection");
-        return false;
-    }
+    // if (!modem_.Command(command)) {
+    //     ESP_LOGE(TAG, "Failed to create MQTT connection");
+    //     return false;
+    // }
 
     // 等待连接完成
     bits = xEventGroupWaitBits(event_group_handle_, MQTT_CONNECTED_EVENT | MQTT_DISCONNECTED_EVENT, pdTRUE, pdFALSE, pdMS_TO_TICKS(MQTT_CONNECT_TIMEOUT_MS));
