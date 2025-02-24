@@ -9,7 +9,7 @@ static const char *TAG = "EC800Http";
 EC800Http::EC800Http(EC800AtModem& modem) : modem_(modem) {
     event_group_handle_ = xEventGroupCreate();
 
-    command_callback_it_ = modem_.RegisterCommandResponseCallback([this](const std::string& command, const std::vector<AtArgumentValue>& arguments) {
+    command_callback_it_ = modem_.RegisterCommandResponseCallback([this](const std::string& command, const std::vector<AtArgumentValueEC>& arguments) {
         if (command == "MHTTPURC") {
             if (arguments[1].int_value == http_id_) {
                 auto& type = arguments[0].string_value;

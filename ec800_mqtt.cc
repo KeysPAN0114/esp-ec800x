@@ -6,7 +6,7 @@ static const char *TAG = "EC800Mqtt";
 EC800Mqtt::EC800Mqtt(EC800AtModem& modem, int mqtt_id) : modem_(modem), mqtt_id_(mqtt_id) {
     event_group_handle_ = xEventGroupCreate();
 
-    command_callback_it_ = modem_.RegisterCommandResponseCallback([this](const std::string command, const std::vector<AtArgumentValue>& arguments) {
+    command_callback_it_ = modem_.RegisterCommandResponseCallback([this](const std::string command, const std::vector<AtArgumentValueEC>& arguments) {
         if (command == "MQTTURC" && arguments.size() >= 2) {
             if (arguments[1].int_value == mqtt_id_) {
                 auto type = arguments[0].string_value;

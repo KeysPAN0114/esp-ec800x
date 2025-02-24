@@ -28,14 +28,14 @@ EC800AtModem::EC800AtModem(int tx_pin, int rx_pin, size_t rx_buffer_size)
     ESP_ERROR_CHECK(uart_set_pin(uart_num_, tx_pin_, rx_pin_, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
 
     xTaskCreate([](void* arg) {
-        auto ml307_at_modem = (EC800AtModem*)arg;
-        ml307_at_modem->EventTask();
+        auto ec800_at_modem = (EC800AtModem*)arg;
+        ec800_at_modem->EventTask();
         vTaskDelete(NULL);
     }, "modem_event", 4096, this, 5, &event_task_handle_);
 
     xTaskCreate([](void* arg) {
-        auto ml307_at_modem = (EC800AtModem*)arg;
-        ml307_at_modem->ReceiveTask();
+        auto ec800_at_modem = (EC800AtModem*)arg;
+        ec800_at_modem->ReceiveTask();
         vTaskDelete(NULL);
     }, "modem_receive", 4096 * 2, this, 5, &receive_task_handle_);
 }
@@ -258,24 +258,24 @@ bool EC800AtModem::ParseResponse() {
         }
         rx_buffer_.erase(0, end_pos + 2);
 
-        // Parse "string", int, int, ... into AtArgumentValue
-        std::vector<AtArgumentValue> arguments;
+        // Parse "string", int, int, ... into AtArgumentValueEC
+        std::vector<AtArgumentValueEC> arguments;
         std::istringstream iss(values);
         std::string item;
         while (std::getline(iss, item, ',')) {
-            AtArgumentValue argument;
+            AtArgumentValueEC argument;
             if (item.front() == '"') {
-                argument.type = AtArgumentValue::Type::String;
+                argument.type = AtArgumentValueEC::Type::String;
                 argument.string_value = item.substr(1, item.size() - 2);
             } else if (item.find(".") != std::string::npos) {
-                argument.type = AtArgumentValue::Type::Double;
+                argument.type = AtArgumentValueEC::Type::Double;
                 argument.double_value = std::stod(item);
             } else if (is_number(item)) {
-                argument.type = AtArgumentValue::Type::Int;
+                argument.type = AtArgumentValueEC::Type::Int;
                 argument.int_value = std::stoi(item);
                 argument.string_value = std::move(item);
             } else {
-                argument.type = AtArgumentValue::Type::String;
+                argument.type = AtArgumentValueEC::Type::String;
                 argument.string_value = std::move(item);
             }
             arguments.push_back(argument);
@@ -313,7 +313,7 @@ void EC800AtModem::OnMaterialReady(std::function<void()> callback) {
     on_material_ready_ = callback;
 }
 
-void EC800AtModem::NotifyCommandResponse(const std::string& command, const std::vector<AtArgumentValue>& arguments) {
+void EC800AtModem::NotifyCommandResponse(const std::string& command, const std::vector<AtArgumentValueEC>& arguments) {
     if (command == "CME ERROR") {
         xEventGroupSetBits(event_group_handle_, AT_EVENT_COMMAND_ERROR);
         return;

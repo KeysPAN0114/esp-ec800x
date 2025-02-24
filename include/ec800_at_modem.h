@@ -23,7 +23,7 @@
 #define DEFAULT_BAUD_RATE 115200
 #define DEFAULT_UART_NUM UART_NUM_1
 
-struct AtArgumentValue {
+struct AtArgumentValueEC {
     enum class Type {
         String,
         Int,
@@ -35,7 +35,7 @@ struct AtArgumentValue {
     double double_value;
 };
 
-typedef std::function<void(const std::string& command, const std::vector<AtArgumentValue>& arguments)> CommandResponseCallback;
+typedef std::function<void(const std::string& command, const std::vector<AtArgumentValueEC>& arguments)> CommandResponseCallback;
 
 class EC800AtModem {
 public:
@@ -99,7 +99,7 @@ private:
     void ReceiveTask();
     bool ParseResponse();
     bool DetectBaudRate();
-    void NotifyCommandResponse(const std::string& command, const std::vector<AtArgumentValue>& arguments);
+    void NotifyCommandResponse(const std::string& command, const std::vector<AtArgumentValueEC>& arguments);
 
     std::list<CommandResponseCallback> on_data_received_;
     std::function<void()> on_material_ready_;

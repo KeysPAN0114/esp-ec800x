@@ -8,7 +8,7 @@
 EC800Udp::EC800Udp(EC800AtModem& modem, int udp_id) : modem_(modem), udp_id_(udp_id) {
     event_group_handle_ = xEventGroupCreate();
 
-    command_callback_it_ = modem_.RegisterCommandResponseCallback([this](const std::string& command, const std::vector<AtArgumentValue>& arguments) {
+    command_callback_it_ = modem_.RegisterCommandResponseCallback([this](const std::string& command, const std::vector<AtArgumentValueEC>& arguments) {
         if (command == "QISTATE" && arguments.size() == 2) {
             if (arguments[0].int_value == udp_id_) {
                 if (arguments[1].int_value == 0) {

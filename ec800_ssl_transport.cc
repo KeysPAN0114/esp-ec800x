@@ -8,7 +8,7 @@ static const char *TAG = "EC800SslTransport";
 EC800SslTransport::EC800SslTransport(EC800AtModem& modem, int tcp_id) : modem_(modem), tcp_id_(tcp_id) {
     event_group_handle_ = xEventGroupCreate();
 
-    command_callback_it_ = modem_.RegisterCommandResponseCallback([this](const std::string& command, const std::vector<AtArgumentValue>& arguments) {
+    command_callback_it_ = modem_.RegisterCommandResponseCallback([this](const std::string& command, const std::vector<AtArgumentValueEC>& arguments) {
         if (command == "QISTATE" && arguments.size() >= 2) {
             if (arguments[0].int_value == tcp_id_) {
                 if (arguments[1].int_value == 3) {
