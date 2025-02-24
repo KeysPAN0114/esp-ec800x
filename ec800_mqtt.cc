@@ -97,7 +97,7 @@ bool EC800Mqtt::Connect(const std::string broker_address, int broker_port, const
     // }
 
     modem_.Command(std::string("AT+QMTCFG=\"version\",") + std::to_string(mqtt_id_) + ",4");
-
+    
     modem_.Command(std::string("AT+QMTCFG=\"aliauth\",") + std::to_string(mqtt_id_));
 
     // Set keep alive

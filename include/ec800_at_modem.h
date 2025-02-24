@@ -73,7 +73,7 @@ public:
 private:
     std::mutex mutex_;
     std::mutex command_mutex_;
-    bool debug_ = false;
+    bool debug_ = true;
     bool network_ready_ = false;
     std::string ip_address_;
     std::string iccid_;
