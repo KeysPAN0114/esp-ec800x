@@ -35,7 +35,7 @@ struct AtArgumentValueEC {
     double double_value;
 };
 
-typedef std::function<void(const std::string& command, const std::vector<AtArgumentValueEC>& arguments)> CommandResponseCallback;
+typedef std::function<void(const std::string& command, const std::vector<AtArgumentValueEC>& arguments)> EcCommandResponseCallback;
 
 class EC800AtModem {
 public:
@@ -48,8 +48,8 @@ public:
     void DecodeHexAppend(std::string& dest, const char* data, size_t length);
 
     bool Command(const std::string command, int timeout_ms = DEFAULT_COMMAND_TIMEOUT);
-    std::list<CommandResponseCallback>::iterator RegisterCommandResponseCallback(CommandResponseCallback callback);
-    void UnregisterCommandResponseCallback(std::list<CommandResponseCallback>::iterator iterator);
+    std::list<EcCommandResponseCallback>::iterator RegisterCommandResponseCallback(EcCommandResponseCallback callback);
+    void UnregisterCommandResponseCallback(std::list<EcCommandResponseCallback>::iterator iterator);
 
     void OnMaterialReady(std::function<void()> callback);
     void Reset();
@@ -101,7 +101,7 @@ private:
     bool DetectBaudRate();
     void NotifyCommandResponse(const std::string& command, const std::vector<AtArgumentValueEC>& arguments);
 
-    std::list<CommandResponseCallback> on_data_received_;
+    std::list<EcCommandResponseCallback> on_data_received_;
     std::function<void()> on_material_ready_;
 };
 

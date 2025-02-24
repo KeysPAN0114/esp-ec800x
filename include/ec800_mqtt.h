@@ -40,7 +40,7 @@ private:
     std::string password_;
     std::string message_payload_;
 
-    std::list<CommandResponseCallback>::iterator command_callback_it_;
+    std::list<EcCommandResponseCallback>::iterator command_callback_it_;
 
     std::string ErrorToString(int error_code);
 };

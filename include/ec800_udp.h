@@ -29,7 +29,7 @@ private:
     EC800AtModem& modem_;
     int udp_id_;
     EventGroupHandle_t event_group_handle_;
-    std::list<CommandResponseCallback>::iterator command_callback_it_;
+    std::list<EcCommandResponseCallback>::iterator command_callback_it_;
 };
 
 #endif // EC800_UDP_H

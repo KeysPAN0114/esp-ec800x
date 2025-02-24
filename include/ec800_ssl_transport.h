@@ -36,7 +36,7 @@ private:
     EventGroupHandle_t event_group_handle_;
     int tcp_id_ = 0;
     std::string rx_buffer_;
-    std::list<CommandResponseCallback>::iterator command_callback_it_;
+    std::list<EcCommandResponseCallback>::iterator command_callback_it_;
 };
 
 #endif // EC800_SSL_TRANSPORT_H

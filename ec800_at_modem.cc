@@ -145,12 +145,12 @@ void EC800AtModem::SetDebug(bool debug) {
     debug_ = debug;
 }
 
-std::list<CommandResponseCallback>::iterator EC800AtModem::RegisterCommandResponseCallback(CommandResponseCallback callback) {
+std::list<EcCommandResponseCallback>::iterator EC800AtModem::RegisterCommandResponseCallback(EcCommandResponseCallback callback) {
     std::lock_guard<std::mutex> lock(mutex_ );
     return on_data_received_.insert(on_data_received_.end(), callback);
 }
 
-void EC800AtModem::UnregisterCommandResponseCallback(std::list<CommandResponseCallback>::iterator iterator) {
+void EC800AtModem::UnregisterCommandResponseCallback(std::list<EcCommandResponseCallback>::iterator iterator) {
     std::lock_guard<std::mutex> lock(mutex_);
     on_data_received_.erase(iterator);
 }

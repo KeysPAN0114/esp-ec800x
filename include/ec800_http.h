@@ -43,7 +43,7 @@ private:
     int status_code_ = -1;
     int error_code_ = -1;
     std::string rx_buffer_;
-    std::list<CommandResponseCallback>::iterator command_callback_it_;
+    std::list<EcCommandResponseCallback>::iterator command_callback_it_;
     std::map<std::string, std::string> headers_;
     std::string url_;
     std::string method_;
