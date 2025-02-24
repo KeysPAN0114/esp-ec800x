@@ -326,7 +326,7 @@ void EC800AtModem::NotifyCommandResponse(const std::string& command, const std::
         }
     } */
     if (command == "CGATT" && arguments.size() >= 1) {
-        if( arguments[1].int_value == 1) {
+        if( arguments[0].int_value == 1) {
             network_ready_ = true;
             xEventGroupSetBits(event_group_handle_, AT_EVENT_NETWORK_READY);
         }
