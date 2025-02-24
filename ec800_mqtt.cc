@@ -112,7 +112,7 @@ bool EC800Mqtt::Connect(const std::string broker_address, int broker_port, const
     modem_.Command("AT+QMTOPEN=" + std::to_string(mqtt_id_) + ",\"" + broker_address + "\"," + std::to_string(broker_port));
 
     // 创建MQTT连接
-    std::string command = "AT+QMTCONN=" + std::to_string(mqtt_id_) + ",\"" + client_id_ + "\",\"" + username_ + "\",\"" + password_ + "\"";
+    modem_.Command("AT+QMTCONN=" + std::to_string(mqtt_id_) + ",\"" + client_id_ + "\",\"" + username_ + "\",\"" + password_ + "\"");
     if (!modem_.Command(command)) {
         ESP_LOGE(TAG, "Failed to create MQTT connection");
         return false;
