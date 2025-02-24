@@ -87,7 +87,7 @@ bool EC800Mqtt::Connect(const std::string broker_address, int broker_port, const
     }
 
     if (broker_port_ == 8883) {
-        if (!modem_.Command(std::string("AT+MQTTCFG=\"ssl\",") + std::to_string(mqtt_id_) + ",1")) {
+        if (!modem_.Command(std::string("AT+QMTCFG=\"ssl\",") + std::to_string(mqtt_id_) + ",1,1")) {
             ESP_LOGE(TAG, "Failed to set MQTT to use SSL");
             return false;
         }
@@ -99,12 +99,12 @@ bool EC800Mqtt::Connect(const std::string broker_address, int broker_port, const
     //     return false;
     // }
 
-    if (!modem_.Command(std::string("AT+MQTTCFG=\"version\",") + std::to_string(mqtt_id_) + ",4")) {
+    if (!modem_.Command(std::string("AT+QMTCFG=\"version\",") + std::to_string(mqtt_id_) + ",4")) {
         ESP_LOGE(TAG, "Failed to set MQTT protocol version");
         return false;
     }
 
-    if (!modem_.Command(std::string("AT+MQTTCFG=\"aliauth\",") + std::to_string(mqtt_id_))) {
+    if (!modem_.Command(std::string("AT+QMTCFG=\"aliauth\",") + std::to_string(mqtt_id_))) {
         ESP_LOGE(TAG, "Failed to set MQTT platform");
         return false;
     }

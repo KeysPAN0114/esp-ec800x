@@ -334,8 +334,8 @@ void EC800AtModem::NotifyCommandResponse(const std::string& command, const std::
         iccid_ = arguments[0].string_value;
     } else if (command == "COPS" && arguments.size() >= 4) {
         carrier_name_ = arguments[2].string_value;
-    } else if (command == "CSQ" && arguments.size() >= 1) {
-        csq_ = arguments[0].int_value;
+    } else if (command == "CSQ" && arguments.size() >= 2) {
+        csq_ = arguments[1].int_value;
     } else if (command == "MATREADY") {
         network_ready_ = false;
         if (on_material_ready_) {
