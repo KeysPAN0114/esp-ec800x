@@ -88,7 +88,7 @@ bool EC800Mqtt::Connect(const std::string broker_address, int broker_port, const
     if (broker_port_ == 8883) {
         modem_.Command(std::string("AT+QMTCFG=\"SSL\",") + std::to_string(mqtt_id_) + ",1,1",3000);
     }
-
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
     // Set clean session
     // if (!modem_.Command(std::string("AT+MQTTCFG=\"clean\",") + std::to_string(mqtt_id_) + ",1")) {
     //     ESP_LOGE(TAG, "Failed to set MQTT clean session");
@@ -96,14 +96,14 @@ bool EC800Mqtt::Connect(const std::string broker_address, int broker_port, const
     // }
 
     modem_.Command(std::string("AT+QMTCFG=\"version\",") + std::to_string(mqtt_id_) + ",4",3000);
-    
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
     modem_.Command(std::string("AT+QMTCFG=\"aliauth\",") + std::to_string(mqtt_id_),3000);
-
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
     // Set keep alive
     modem_.Command(std::string("AT+QMTCFG=\"qmtping\",") + std::to_string(mqtt_id_) + "," + std::to_string(keep_alive_seconds_),3000);
-
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
     modem_.Command("AT+QMTOPEN=" + std::to_string(mqtt_id_) + ",\"" + broker_address_ + "\"," + std::to_string(broker_port_),3000);
-
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
     // 创建MQTT连接
     modem_.Command("AT+QMTCONN=" + std::to_string(mqtt_id_) + ",\"" + client_id_ + "\",\"" + username_ + "\",\"" + password_ + "\"",3000);
     // if (!modem_.Command(command)) {
