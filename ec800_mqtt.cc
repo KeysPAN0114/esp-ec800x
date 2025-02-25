@@ -1,6 +1,5 @@
 #include "ec800_mqtt.h"
 #include <esp_log.h>
-
 static const char *TAG = "EC800Mqtt";
 
 EC800Mqtt::EC800Mqtt(EC800AtModem& modem, int mqtt_id) : modem_(modem), mqtt_id_(mqtt_id) {
@@ -87,7 +86,7 @@ bool EC800Mqtt::Connect(const std::string broker_address, int broker_port, const
     // }
 
     if (broker_port_ == 8883) {
-        modem_.Command(std::string("AT+QMTCFG=\"SSL\",") + std::to_string(mqtt_id_) + ",1,1");
+        modem_.Command(std::string("AT+QMTCFG=\"SSL\",") + std::to_string(mqtt_id_) + ",1,1",3000);
     }
 
     // Set clean session
@@ -96,17 +95,17 @@ bool EC800Mqtt::Connect(const std::string broker_address, int broker_port, const
     //     return false;
     // }
 
-    modem_.Command(std::string("AT+QMTCFG=\"version\",") + std::to_string(mqtt_id_) + ",4");
+    modem_.Command(std::string("AT+QMTCFG=\"version\",") + std::to_string(mqtt_id_) + ",4",3000);
     
-    modem_.Command(std::string("AT+QMTCFG=\"aliauth\",") + std::to_string(mqtt_id_));
+    modem_.Command(std::string("AT+QMTCFG=\"aliauth\",") + std::to_string(mqtt_id_),3000);
 
     // Set keep alive
-    modem_.Command(std::string("AT+QMTCFG=\"qmtping\",") + std::to_string(mqtt_id_) + "," + std::to_string(keep_alive_seconds_));
+    modem_.Command(std::string("AT+QMTCFG=\"qmtping\",") + std::to_string(mqtt_id_) + "," + std::to_string(keep_alive_seconds_),3000);
 
-    modem_.Command("AT+QMTOPEN=" + std::to_string(mqtt_id_) + ",\"" + broker_address_ + "\"," + std::to_string(broker_port_));
+    modem_.Command("AT+QMTOPEN=" + std::to_string(mqtt_id_) + ",\"" + broker_address_ + "\"," + std::to_string(broker_port_),3000);
 
     // 创建MQTT连接
-    modem_.Command("AT+QMTCONN=" + std::to_string(mqtt_id_) + ",\"" + client_id_ + "\",\"" + username_ + "\",\"" + password_ + "\"");
+    modem_.Command("AT+QMTCONN=" + std::to_string(mqtt_id_) + ",\"" + client_id_ + "\",\"" + username_ + "\",\"" + password_ + "\"",3000);
     // if (!modem_.Command(command)) {
     //     ESP_LOGE(TAG, "Failed to create MQTT connection");
     //     return false;
