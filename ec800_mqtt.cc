@@ -87,7 +87,7 @@ bool EC800Mqtt::Connect(const std::string broker_address, int broker_port, const
     // }
 
     if (broker_port_ == 8883) {
-        modem_.Command(std::string("AT+QMTCFG=\"ssl\",") + std::to_string(mqtt_id_) + ",1,1");
+        modem_.Command(std::string("AT+QMTCFG=\"SSL\",") + std::to_string(mqtt_id_) + ",1,1");
     }
 
     // Set clean session
@@ -102,9 +102,6 @@ bool EC800Mqtt::Connect(const std::string broker_address, int broker_port, const
 
     // Set keep alive
     modem_.Command(std::string("AT+QMTCFG=\"qmtping\",") + std::to_string(mqtt_id_) + "," + std::to_string(keep_alive_seconds_));
-
-    // Set HEX encoding
-    modem_.Command("AT+QMTCFG=\"dataformat\"," + std::to_string(mqtt_id_) + ",1,1");
 
     modem_.Command("AT+QMTOPEN=" + std::to_string(mqtt_id_) + ",\"" + broker_address_ + "\"," + std::to_string(broker_port_));
 
@@ -121,6 +118,9 @@ bool EC800Mqtt::Connect(const std::string broker_address, int broker_port, const
         ESP_LOGE(TAG, "Failed to connect to MQTT broker");
         return false;
     }
+
+    // Set HEX encoding
+    modem_.Command("AT+QMTCFG=\"dataformat\"," + std::to_string(mqtt_id_) + ",1,1");
 
     connected_ = true;
     if (on_connected_callback_) {

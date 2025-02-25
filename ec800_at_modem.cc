@@ -86,6 +86,7 @@ bool EC800AtModem::SetBaudRate(int new_baud_rate) {
 
 int EC800AtModem::WaitForNetworkReady() {
     ESP_LOGI(TAG, "Waiting for network ready...");
+    Command("ATE0");
     Command("AT+CEREG=1", 1000);
     while (!network_ready_) {
         if (pin_ready_ == 2) {
