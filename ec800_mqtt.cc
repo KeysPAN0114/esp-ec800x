@@ -58,7 +58,13 @@ EC800Mqtt::EC800Mqtt(EC800AtModem& modem, int mqtt_id) : modem_(modem), mqtt_id_
                     xEventGroupSetBits(event_group_handle_, MQTT_DISCONNECTED_EVENT);
                 }
             }
-        }
+        } else if (command == "QMTOPEN") {
+            if (arguments[0].int_value == mqtt_id_) {
+                if (arguments[1].int_value == 0)
+                    xEventGroupSetBits(event_group_handle_, MQTT_OPENED_EVENT);
+                }
+                ESP_LOGI(TAG, "MQTT open state: %s", ErrorToString(arguments[1].int_value).c_str());
+            }
     });
 }
 
@@ -96,14 +102,14 @@ bool EC800Mqtt::Connect(const std::string broker_address, int broker_port, const
     // }
 
     modem_.Command(std::string("AT+QMTCFG=\"version\",") + std::to_string(mqtt_id_) + ",4",3000);
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
     modem_.Command(std::string("AT+QMTCFG=\"aliauth\",") + std::to_string(mqtt_id_),3000);
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
     // Set keep alive
     modem_.Command(std::string("AT+QMTCFG=\"qmtping\",") + std::to_string(mqtt_id_) + "," + std::to_string(keep_alive_seconds_),3000);
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
     modem_.Command("AT+QMTOPEN=" + std::to_string(mqtt_id_) + ",\"" + broker_address_ + "\"," + std::to_string(broker_port_),3000);
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    xEventGroupWaitBits(event_group_handle_, MQTT_OPENED_EVENT, pdTRUE, pdFALSE, pdMS_TO_TICKS(MQTT_CONNECT_TIMEOUT_MS));
     // 创建MQTT连接
     modem_.Command("AT+QMTCONN=" + std::to_string(mqtt_id_) + ",\"" + client_id_ + "\",\"" + username_ + "\",\"" + password_ + "\"",3000);
     // if (!modem_.Command(command)) {
