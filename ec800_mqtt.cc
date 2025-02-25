@@ -181,6 +181,8 @@ bool EC800Mqtt::Unsubscribe(const std::string topic) {
 
 std::string EC800Mqtt::ErrorToString(int error_code) {
     switch (error_code) {
+        case 0:
+            return "MQTT连接打开/连接成功";
         case 1:
             return "MQTT初始化";
         case 2:

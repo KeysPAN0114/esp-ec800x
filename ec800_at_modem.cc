@@ -165,7 +165,7 @@ bool EC800AtModem::Command(const std::string command, int timeout_ms) {
     {
         std::lock_guard<std::mutex> lock(mutex_);
         last_command_ = command + "\r\n";
-        vTaskDelay(200);
+        vTaskDelay(50 / portTICK_PERIOD_MS);
         int ret = uart_write_bytes(uart_num_, last_command_.c_str(), last_command_.length());
         if (ret < 0) {
             ESP_LOGE(TAG, "uart_write_bytes failed: %d", ret);
