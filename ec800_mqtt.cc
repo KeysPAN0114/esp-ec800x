@@ -1,7 +1,7 @@
 #include "ec800_mqtt.h"
 #include <esp_log.h>
 static const char *TAG = "EC800Mqtt";
-
+#define MQTT_OPENED_EVENT BIT3
 EC800Mqtt::EC800Mqtt(EC800AtModem& modem, int mqtt_id) : modem_(modem), mqtt_id_(mqtt_id) {
     event_group_handle_ = xEventGroupCreate();
 
