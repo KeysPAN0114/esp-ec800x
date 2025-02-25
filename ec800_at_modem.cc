@@ -102,9 +102,9 @@ int EC800AtModem::WaitForNetworkReady() {
         xEventGroupWaitBits(event_group_handle_, AT_EVENT_NETWORK_READY, pdTRUE, pdFALSE, pdMS_TO_TICKS(1000));
     }
     //配置 PDP 上下文为 1，APN 为中国联通的"UNINET"。
-    modem_.Command(std::string("AT+QICSGP=1,1,\"UNINET\",\"\",\"\",1"));
+    Command(std::string("AT+QICSGP=1,1,\"UNINET\",\"\",\"\",1"));
     //激活 PDP 上下文
-    modem_.Command(std::string("AT+QIACT=1"));
+    Command(std::string("AT+QIACT=1"));
     return 0;
 }
 
