@@ -144,12 +144,6 @@ bool EC800Http::Open(const std::string& method, const std::string& url, const st
         ESP_LOGE(TAG, "查询PDP上下文状态失败");
         return false;
     }
-    //配置 PDP 上下文为 1，APN 为中国联通的"UNINET"。
-    sprintf(command,"AT+QICSGP=1,1,\"UNINET\",\"\",\"\",1");
-    modem_.Command(command);
-    //激活 PDP 上下文
-    sprintf(command,"AT+QIACT=1");
-    modem_.Command(command);
 
     //假如是HTTPS协议，需要配置SSL
     if(protocol_ == "https") {

@@ -82,8 +82,6 @@ bool EC800SslTransport::Connect(const char* host, int port) {
     }
 
     // 场景激活
-    sprintf(command, "AT+QIACT=1");
-    modem_.Command(command);
     sprintf(command, "AT+QIACT?");
     if (!modem_.Command(command)) {
         ESP_LOGE(TAG, "");
