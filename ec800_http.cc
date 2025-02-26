@@ -195,11 +195,11 @@ bool EC800Http::Open(const std::string& method, const std::string& url, const st
     // modem_.Command(command);
 
     // Set headers
-    // for (const auto& header : headers_) {
-    //     auto line = header.first + ": " + header.second;
-    //     sprintf(command, "AT+MHTTPCFG=\"header\",%d,%s", http_id_, line.c_str());
-    //     modem_.Command(command);
-    // }
+    for (const auto& header : headers_) {
+        auto line = header.first + ": " + header.second;
+        sprintf(command, "AT+QHTTPCFG=\"requestheader\",%s", line.c_str());
+        modem_.Command(command);
+    }
 
     // if (!content.empty() && method_ == "POST") {
     //     sprintf(command, "AT+MHTTPCONTENT=%d,0,%zu", http_id_, content.size());
@@ -229,12 +229,12 @@ bool EC800Http::Open(const std::string& method, const std::string& url, const st
         sprintf(command, "AT+QHTTPREAD=80");
         modem_.Command(command);
     } else if(strcmp(methods[method_value],"POST") == 0) {
-        sprintf(command, "AT+QHTTPPOST=%d,80,80", content_length_);
+        sprintf(command, "AT+QHTTPPOST=%d,80,80", content.length());
         modem_.Command(command);
         modem_.Command(content);
-        sprintf(command, "AT+QHTTPREAD=80");
-        modem_.Command(command);
     }
+    sprintf(command, "AT+QHTTPREAD=80");
+    modem_.Command(command);
     // sprintf(command, "AT+MHTTPREQUEST=%d,%d,0,", http_id_, method_value);
     // modem_.Command(std::string(command) + modem_.EncodeHex(path_));
 
