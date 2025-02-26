@@ -197,7 +197,7 @@ bool EC800Http::Open(const std::string& method, const std::string& url, const st
     // Set headers
     for (const auto& header : headers_) {
         auto line = header.first + ": " + header.second;
-        sprintf(command, "AT+QHTTPCFG=\"requestheader\",%s", line.c_str());
+        sprintf(command, "AT+QHTTPCFG=\"header\",%s", line.c_str());
         modem_.Command(command);
     }
 
