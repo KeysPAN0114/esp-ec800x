@@ -171,7 +171,7 @@ bool EC800Http::Open(const std::string& method, const std::string& url, const st
 
     // 创建HTTP连接
     char http_url[256];
-    sprintf(http_url, "%s://%s", protocol_.c_str(), host_.c_str());
+    sprintf(http_url, "%s://%s", protocol_.c_str(), host_.c_str() + path_.c_str());
     if (!modem_.Command(http_url)) {
         ESP_LOGE(TAG, "创建HTTP连接失败");
         return false;
